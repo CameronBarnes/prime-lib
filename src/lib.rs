@@ -39,30 +39,29 @@ pub fn lower_bound_for_nth_prime(n: usize) -> usize {
 #[must_use]
 pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
     let n = bound;
-    let mut is_prime = vec![true; n + 1];
+    let mut is_prime = vec![true; n / 2 + 1];
     is_prime[0] = false;
-    is_prime[1] = false;
-    let mut i = 2;
+    let mut i = 3;
     while i * i <= n {
-        if is_prime[i] {
+        if is_prime[i / 2] {
             let mut j = i * i;
             while j <= n {
-                is_prime[j] = false;
+                if j % 2 != 0 {
+                    is_prime[j / 2] = false;
+                }
                 j += i;
             }
         }
 
-        if i > 2 {
-            i += 2;
-        } else {
-            i += 1;
-        }
+        i += 2;
     }
-    is_prime
+    let mut primes : Vec<usize> = is_prime
         .into_iter()
         .enumerate()
-        .filter_map(|(num, is_prime)| if is_prime { Some(num) } else { None })
-        .collect()
+        .filter_map(|(num, is_prime)| if is_prime { Some(num * 2 + 1) } else { None })
+        .collect();
+    primes.insert(0, 2);
+    primes
 }
 
 #[must_use]
