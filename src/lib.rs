@@ -46,7 +46,7 @@ pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
         if is_prime[i / 2] {
             let mut j = i * i;
             while j <= n {
-                if j % 2 != 0 {
+                if j & 1 != 0 {
                     is_prime[j / 2] = false;
                 }
                 j += i;
@@ -74,14 +74,14 @@ pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
 }
 
 fn sieve_segment(primes: &[usize], mut lower_bound: usize, upper_bound: usize) -> Vec<usize> {
-    if lower_bound % 2 == 0 {
+    if lower_bound & 1 == 0 {
         lower_bound += 1;
     }
     let mut is_prime = vec![true; (upper_bound - lower_bound) / 2 + 1];
     for prime in primes {
         let mut value = (prime * prime).max((lower_bound + prime - 1) / prime * prime);
         while value <= upper_bound {
-            if value % 2 != 0 {
+            if value & 1 != 0 {
                 is_prime[(value - lower_bound) / 2] = false;
             }
             value += prime;
