@@ -1,3 +1,7 @@
+pub mod counting;
+
+use counting::LegendrePrimeCounter;
+
 #[allow(
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,
@@ -58,16 +62,14 @@ pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
     let mut primes: Vec<usize> = is_prime
         .into_iter()
         .enumerate()
-        .filter_map(
-            |(num, is_prime)| {
-                let num = num * 2 + 1;
-                if is_prime && num <= bound {
-                    Some(num)
-                } else {
-                    None
-                }
-            },
-        )
+        .filter_map(|(num, is_prime)| {
+            let num = num * 2 + 1;
+            if is_prime && num <= bound {
+                Some(num)
+            } else {
+                None
+            }
+        })
         .collect();
     primes.insert(0, 2);
     primes
@@ -93,16 +95,14 @@ fn sieve_segment(primes: &[usize], mut lower_bound: usize, upper_bound: usize) -
     is_prime
         .into_iter()
         .enumerate()
-        .filter_map(
-            |(num, is_prime)| {
-                let num = num * 2 + lower_bound;
-                if is_prime && num <= upper_bound {
-                    Some(num)
-                } else {
-                    None
-                }
-            },
-        )
+        .filter_map(|(num, is_prime)| {
+            let num = num * 2 + lower_bound;
+            if is_prime && num <= upper_bound {
+                Some(num)
+            } else {
+                None
+            }
+        })
         .collect()
 }
 
@@ -113,11 +113,11 @@ fn sieve_segment(primes: &[usize], mut lower_bound: usize, upper_bound: usize) -
 )]
 #[must_use]
 pub fn block_sieve(bound: usize) -> Vec<usize> {
-    static BLOCK_SIZE: usize = 100_000;
+    static BLOCK_SIZE: usize = 200_000;
     if (bound as f64 * 0.9) as usize <= BLOCK_SIZE {
-                                                    // We're going to allow for the value to be
-                                                    // off by up to 10% and still use a simple
-                                                    // sieve, as at that size it shouldnt matter
+        // We're going to allow for the value to be
+        // off by up to 10% and still use a simple
+        // sieve, as at that size it shouldnt matter
         return sieve_eratosthenes(bound);
     }
 
@@ -140,12 +140,46 @@ pub fn block_sieve(bound: usize) -> Vec<usize> {
     primes
 }
 
+fn count_items_in_range(primes: &[usize], lower_bound: usize, upper_bound: usize) -> usize {
+    primes
+        .iter()
+        .filter(|x| **x >= lower_bound && **x <= upper_bound)
+        .count()
+}
+
 #[allow(clippy::cast_precision_loss, clippy::missing_panics_doc)]
 #[must_use]
 pub fn nth_prime(n: usize) -> usize {
-    let upper_bound = upper_bound_for_nth_prime(n);
-    let primes = block_sieve(upper_bound);
-    primes[n - 1]
+    static LOW_PRIMES: [usize; 5] = [2, 3, 5, 7, 11];
+    if n < 6 {
+        return LOW_PRIMES[n - 1];
+    }
+    let mut upper_bound = upper_bound_for_nth_prime(n);
+    let mut lower_bound = lower_bound_for_nth_prime(n);
+    let counter = LegendrePrimeCounter::new(upper_bound);
+
+    // We're going to split the range once before sieving for primes
+    let middle = lower_bound + (upper_bound - lower_bound) / 2;
+    if counter.count_primes(middle) >= n {
+        upper_bound = middle;
+    } else {
+        lower_bound = middle;
+    }
+
+    let primes = sieve_segment(counter.prime_factors(), lower_bound, upper_bound);
+    while count_items_in_range(&primes, lower_bound, upper_bound) > 1 {
+        let middle = lower_bound + (upper_bound - lower_bound) / 2;
+        if counter.count_primes(middle) >= n {
+            upper_bound = middle;
+        } else {
+            lower_bound = middle;
+        }
+    }
+
+    *primes
+        .iter()
+        .find(|x| **x >= lower_bound && **x <= upper_bound)
+        .expect("should always have exactly one value left at this point")
 }
 
 #[cfg(test)]
@@ -175,7 +209,7 @@ mod tests {
     #[case(100_000, 1_299_709)]
     #[case(1_000_000, 15_485_863)]
     #[case(10_000_000, 179_424_673)]
-    fn sieve_testing(#[case] n: usize, #[case] prime: usize) {
+    fn search_testing(#[case] n: usize, #[case] prime: usize) {
         assert_eq!(nth_prime(n), prime);
     }
 
@@ -191,7 +225,7 @@ mod tests {
     fn lower_bounds_testing(#[case] n: usize, #[case] prime: usize) {
         assert!(lower_bound_for_nth_prime(n) <= prime);
     }
-    
+
     #[rstest]
     #[case(1)]
     #[case(10)]
@@ -208,7 +242,7 @@ mod tests {
         assert_eq!(eratosthenes.len(), block.len());
         assert_eq!(eratosthenes, block);
     }
- 
+
     #[rstest]
     #[case(100)]
     #[case(1_300_000)]
