@@ -71,7 +71,9 @@ pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
             }
         })
         .collect();
-    primes.insert(0, 2);
+    if bound >= 2 {
+        primes.insert(0, 2);
+    }
     primes
 }
 
