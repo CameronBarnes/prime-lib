@@ -42,22 +42,26 @@ pub fn lower_bound_for_nth_prime(n: usize) -> usize {
 
 #[must_use]
 pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
-    let n = bound;
-    let mut is_prime = vec![true; n / 2 + 1];
+    let mut is_prime = vec![true; bound / 2 + 1];
     is_prime[0] = false;
-    let mut i = 3;
-    while i * i <= n {
-        if is_prime[i / 2] {
-            let mut j = i * i;
-            while j <= n {
-                if j & 1 != 0 {
-                    is_prime[j / 2] = false;
-                }
-                j += i;
+    let mut i = 1;
+    let mut i_full: usize;
+    let mut i_full_2;
+    while {
+        i_full = i * 2 + 1;
+        i_full_2 = i_full.pow(2);
+        i_full_2
+    } <= bound
+    {
+        if is_prime[i] {
+            let mut j = i_full_2;
+            while j <= bound {
+                is_prime[j >> 1] = false;
+                j += i_full * 2;
             }
         }
 
-        i += 2;
+        i += 1;
     }
     let mut primes: Vec<usize> = is_prime
         .into_iter()
@@ -124,7 +128,10 @@ pub fn block_sieve(bound: usize) -> Vec<usize> {
     }
 
     let nsqurt = (bound as f64).sqrt() as usize;
-    let mut primes = if nsqurt <= BLOCK_SIZE {
+    let mut primes = if (nsqurt as f64 * 0.9) as usize <= BLOCK_SIZE {
+        // We're going to allow for the value to be
+        // off by up to 10% and still use a simple
+        // sieve, as at that size it shouldnt matter
         sieve_eratosthenes(nsqurt)
     } else {
         block_sieve(nsqurt)
