@@ -43,25 +43,28 @@ pub fn lower_bound_for_nth_prime(n: usize) -> usize {
 #[must_use]
 pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
     let mut is_prime = vec![true; bound / 2 + 1];
-    is_prime[0] = false;
-    let mut i = 1;
-    let mut i_full: usize;
-    let mut i_full_2;
-    while {
-        i_full = i * 2 + 1;
-        i_full_2 = i_full.pow(2);
-        i_full_2
-    } <= bound
     {
-        if is_prime[i] {
-            let mut j = i_full_2;
-            while j <= bound {
-                is_prime[j >> 1] = false;
-                j += i_full * 2;
+        let is_prime = is_prime.as_mut_slice();
+        is_prime[0] = false;
+        let mut i = 1;
+        let mut i_full: usize;
+        let mut i_full_2;
+        while {
+            i_full = i * 2 + 1;
+            i_full_2 = i_full.pow(2);
+            i_full_2
+        } <= bound
+        {
+            if is_prime[i] {
+                let mut j = i_full_2;
+                while j <= bound {
+                    is_prime[j >> 1] = false;
+                    j += i_full * 2;
+                }
             }
-        }
 
-        i += 1;
+            i += 1;
+        }
     }
     let mut primes: Vec<usize> = is_prime
         .into_iter()
@@ -86,17 +89,20 @@ fn sieve_segment(primes: &[usize], mut lower_bound: usize, upper_bound: usize) -
         lower_bound += 1;
     }
     let mut is_prime = vec![true; (upper_bound - lower_bound) / 2 + 1];
-    for prime in primes {
-        let mut value = (prime * prime).max((lower_bound + prime - 1) / prime * prime);
-        while value <= upper_bound {
-            if value & 1 != 0 {
-                is_prime[(value - lower_bound) / 2] = false;
+    {
+        let is_prime = is_prime.as_mut_slice();
+        for prime in primes {
+            let mut value = (prime * prime).max((lower_bound + prime - 1) / prime * prime);
+            while value <= upper_bound {
+                if value & 1 != 0 {
+                    is_prime[(value - lower_bound) / 2] = false;
+                }
+                value += prime;
             }
-            value += prime;
         }
-    }
-    if lower_bound == 1 {
-        is_prime[0] = false;
+        if lower_bound == 1 {
+            is_prime[0] = false;
+        }
     }
     is_prime
         .into_iter()
