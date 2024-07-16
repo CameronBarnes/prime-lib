@@ -15,8 +15,8 @@ nursery = "deny"
 tracing = "0.1.40"
 
 [dev-dependencies]
-rstest = "0.18"
-rstest_reuse = "0.6"
+rstest = "0.21"
+rstest_reuse = "0.7"
 criterion = {version = "0.5", features = ["html_reports"]}
 
 [[bench]]
