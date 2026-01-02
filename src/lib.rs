@@ -66,21 +66,23 @@ pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
             i += 1;
         }
     }
-    let mut primes: Vec<usize> = is_prime
-        .into_iter()
-        .enumerate()
-        .filter_map(|(num, is_prime)| {
-            let num = num * 2 + 1;
-            if is_prime && num <= bound {
-                Some(num)
-            } else {
-                None
-            }
-        })
-        .collect();
+    let mut primes = Vec::with_capacity(is_prime.len());
     if bound >= 2 {
-        primes.insert(0, 2);
+        primes.push(2);
     }
+    primes.extend(
+        is_prime
+            .into_iter()
+            .enumerate()
+            .filter_map(|(num, is_prime)| {
+                if is_prime {
+                    let num = num * 2 + 1;
+                    (num <= bound).then_some(num)
+                } else {
+                    None
+                }
+            }),
+    );
     primes
 }
 
@@ -104,18 +106,21 @@ fn sieve_segment(primes: &[usize], mut lower_bound: usize, upper_bound: usize) -
             is_prime[0] = false;
         }
     }
-    is_prime
-        .into_iter()
-        .enumerate()
-        .filter_map(|(num, is_prime)| {
-            let num = num * 2 + lower_bound;
-            if is_prime && num <= upper_bound {
-                Some(num)
-            } else {
-                None
-            }
-        })
-        .collect()
+    let mut primes = Vec::with_capacity(is_prime.len());
+    primes.extend(
+        is_prime
+            .into_iter()
+            .enumerate()
+            .filter_map(|(num, is_prime)| {
+                if is_prime {
+                    let num = num * 2 + lower_bound;
+                    (num <= upper_bound).then_some(num)
+                } else {
+                    None
+                }
+            }),
+    );
+    primes
 }
 
 #[allow(
