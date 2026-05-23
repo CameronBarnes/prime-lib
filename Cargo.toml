@@ -13,6 +13,7 @@ nursery = "deny"
 
 [dependencies]
 tracing = "0.1.40"
+rustc-hash = "2.1"
 
 [dev-dependencies]
 rstest = "0.26"
@@ -29,7 +30,9 @@ strip = "symbols"
 [profile.flamegraph]
 debug = 2
 inherits = "release"
-strip = "none"
+debug-assertions = true
+strip = false
+split-debuginfo = "off"
 
 [[bench]]
 name = "prime-bench"

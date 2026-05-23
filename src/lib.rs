@@ -94,7 +94,7 @@ fn sieve_segment(primes: &[usize], mut lower_bound: usize, upper_bound: usize) -
     {
         let is_prime = is_prime.as_mut_slice();
         for prime in primes {
-            let mut value = (prime * prime).max((lower_bound + prime - 1) / prime * prime);
+            let mut value = (prime * prime).max(lower_bound.div_ceil(*prime) * prime);
             while value <= upper_bound {
                 if value & 1 != 0 {
                     is_prime[(value - lower_bound) / 2] = false;
@@ -138,7 +138,7 @@ pub fn block_sieve(bound: usize) -> Vec<usize> {
         return sieve_eratosthenes(bound);
     }
 
-    let nsqurt = (bound as f64).sqrt() as usize;
+    let nsqurt = bound.isqrt();
     let mut primes = if (nsqurt as f64 * 0.9) as usize <= BLOCK_SIZE {
         // We're going to allow for the value to be
         // off by up to 10% and still use a simple
@@ -176,7 +176,7 @@ pub fn nth_prime(n: usize) -> usize {
     }
     let mut upper_bound = upper_bound_for_nth_prime(n);
     let mut lower_bound = lower_bound_for_nth_prime(n);
-    let counter = LegendrePrimeCounter::new(upper_bound);
+    let mut counter = LegendrePrimeCounter::new(upper_bound);
 
     // We're going to split the range once before sieving for primes
     let middle = lower_bound + (upper_bound - lower_bound) / 2;
@@ -229,6 +229,7 @@ mod tests {
     #[case(100_000, 1_299_709)]
     #[case(1_000_000, 15_485_863)]
     #[case(10_000_000, 179_424_673)]
+    #[case(1_000_000_000, 22_801_763_489)]
     fn search_testing(#[case] n: usize, #[case] prime: usize) {
         assert_eq!(nth_prime(n), prime);
     }
@@ -272,7 +273,7 @@ mod tests {
             clippy::cast_sign_loss,
             clippy::cast_possible_truncation
         )]
-        let nsqurt = (n as f64).sqrt() as usize;
+        let nsqurt = n.isqrt();
         let mut primes = sieve_eratosthenes(nsqurt);
         let mut segment = sieve_segment(&primes, nsqurt + 1, n);
         primes.append(&mut segment);

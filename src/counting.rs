@@ -1,7 +1,12 @@
+use rustc_hash::FxHashMap;
 
+const MAX_A_CACHE: usize = 64;
 
 pub struct LegendrePrimeCounter {
     primes: Vec<usize>,
+
+    pi_cache: FxHashMap<usize, usize>,
+    phi_cache: FxHashMap<u64, usize>,
 }
 
 impl LegendrePrimeCounter {
@@ -12,8 +17,12 @@ impl LegendrePrimeCounter {
     )]
     #[must_use]
     pub fn new(limit: usize) -> Self {
-        let primes = super::block_sieve((limit as f64).sqrt() as usize);
-        Self { primes }
+        let primes = super::block_sieve(limit.isqrt());
+        Self {
+            primes,
+            pi_cache: FxHashMap::default(),
+            phi_cache: FxHashMap::default(),
+        }
     }
 
     #[must_use]
@@ -27,34 +36,84 @@ impl LegendrePrimeCounter {
         clippy::cast_possible_truncation
     )]
     #[must_use]
-    pub fn count_primes(&self, n: usize) -> usize {
+    pub fn count_primes(&mut self, n: usize) -> usize {
         if n < 2 {
             0
+        } else if let Some(v) = self.pi_cache.get(&n) {
+            *v
         } else {
-            let a = self.count_primes((n as f64).sqrt() as usize);
-            self.phi(n, a) + a - 1
+            let a = self.count_primes(n.isqrt());
+            let result = self.phi(n, a) + a - 1;
+            self.pi_cache.insert(n, result);
+            result
         }
     }
 
-    fn phi(&self, x: usize, a: usize) -> usize {
-        match a {
-            0 => x,
-            1 => x - (x >> 1),
-            a => {
-                let pa = self.primes[a - 1];
-                if x < pa {
-                    1
-                } else {
-                    self.phi(x, a - 1) - self.phi(x / pa, a - 1)
+    #[inline(never)]
+    fn phi(&mut self, x: usize, mut a: usize) -> usize {
+        let mut result: isize = 0;
+
+        loop {
+            match a {
+                0 => return (result + x.cast_signed()).cast_unsigned(),
+                // remove multiples of 2
+                1 => {
+                    return (result + (x - (x >> 1)).cast_signed()).cast_unsigned();
                 }
+                // remove multiples of 2 and 3
+                2 => {
+                    let v = x - (x >> 1) - x / 3 + x / 6;
+                    return (result + v.cast_signed()).cast_unsigned();
+                }
+                // remove multiples of 2,3,5
+                3 => {
+                    let positives = x + x / 6 + x / 10 + x / 15;
+                    let negatives = (x >> 1) + x / 3 + x / 5 + x / 30;
+
+                    let v = positives - negatives;
+                    return (result + v.cast_signed()).cast_unsigned();
+                }
+
+                _ => {}
             }
+
+            let pa = self.primes[a - 1];
+            if x < pa {
+                return (result + 1).cast_unsigned();
+            }
+
+            let key = phi_key(x, a);
+            if a <= MAX_A_CACHE
+                && let Some(v) = self.phi_cache.get(&key)
+            {
+                return (result + (*v).cast_signed()).cast_unsigned();
+            }
+
+            // recursively evaluate ONLY the smaller branch
+            let rhs = self.phi(x / pa, a - 1);
+
+            // accumulate:
+            //
+            // phi(x,a)
+            //   = phi(x,a-1) - rhs
+            //
+            // so defer phi(x,a-1) into loop iteration
+
+            result -= rhs.cast_signed();
+
+            // continue iteratively down left spine
+            a -= 1;
         }
     }
 }
 
+const fn phi_key(x: usize, a: usize) -> u64 {
+    ((x as u64) << 16) | (a as u64)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{upper_bound_for_nth_prime, counting::*};
+    use crate::{counting::*, upper_bound_for_nth_prime};
     use rstest::rstest;
 
     #[rstest]
@@ -70,7 +129,7 @@ mod tests {
     #[case(1_000_000_000, 50_847_534)]
     fn test_prime_count(#[case] n: usize, #[case] expected_count: usize) {
         let upper_bound = upper_bound_for_nth_prime(n);
-        let counter = LegendrePrimeCounter::new(upper_bound);
+        let mut counter = LegendrePrimeCounter::new(upper_bound);
         assert_eq!(counter.count_primes(n), expected_count);
     }
 }
