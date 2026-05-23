@@ -160,6 +160,30 @@ pub fn block_sieve(bound: usize) -> Vec<usize> {
     primes
 }
 
+pub fn block_sieve_segment(
+    primes: &[usize],
+    lower_bound: usize,
+    upper_bound_cap: usize,
+) -> Vec<usize> {
+    static BLOCK_SIZE: usize = 200_000;
+    if ((upper_bound_cap - lower_bound) as f64 * 0.9) as usize <= BLOCK_SIZE {
+        // We're going to allow for the value to be
+        // off by up to 10% and still use a single segment,
+        // as at that size it shouldnt matter
+        return sieve_segment(primes, lower_bound, upper_bound_cap);
+    }
+
+    let mut completed = lower_bound;
+    let mut block_primes = Vec::new();
+    while completed < upper_bound_cap {
+        let upper_bound = (completed + BLOCK_SIZE).min(upper_bound_cap);
+        block_primes.append(&mut sieve_segment(&primes, completed + 1, upper_bound));
+        completed += BLOCK_SIZE;
+    }
+
+    block_primes
+}
+
 #[allow(clippy::missing_panics_doc)]
 #[must_use]
 pub fn nth_prime(n: usize) -> usize {
@@ -178,25 +202,11 @@ pub fn nth_prime(n: usize) -> usize {
     } else {
         lower_bound = middle;
     }
+    let base = counter.count_primes(lower_bound);
 
-    let primes = sieve_segment(counter.prime_factors(), lower_bound, upper_bound);
-    let mut left = 0;
-    let mut right = primes.len() - 1;
-
-    while left < right {
-        let mid_idx = left + (right - left) / 2;
-        let mid_prime = primes[mid_idx];
-
-        let count = counter.count_primes(mid_prime);
-
-        if count >= n {
-            right = mid_idx;
-        } else {
-            left = mid_idx + 1;
-        }
-    }
-
-    primes[left]
+    let primes = block_sieve_segment(counter.prime_factors(), lower_bound, upper_bound);
+    let offset = n - base - 1;
+    primes[offset]
 }
 
 #[cfg(test)]
