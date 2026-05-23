@@ -100,7 +100,7 @@ fn sieve_segment(
     {
         for prime in primes.iter().skip(1) {
             let mut value = prime * prime;
-            let step = prime *2;
+            let step = prime * 2;
 
             if value < lower_bound {
                 value = lower_bound + ((prime - lower_bound % prime) % prime);
@@ -119,19 +119,14 @@ fn sieve_segment(
     }
 
     let mut primes = Vec::with_capacity((upper_bound - lower_bound) / 8);
-    primes.extend(
-        is_prime
-            .iter()
-            .enumerate()
-            .filter_map(|(num, is_prime)| {
-                if *is_prime {
-                    let num = num * 2 + lower_bound;
-                    (num <= upper_bound).then_some(num)
-                } else {
-                    None
-                }
-            }),
-    );
+    primes.extend(is_prime.iter().enumerate().filter_map(|(num, is_prime)| {
+        if *is_prime {
+            let num = num * 2 + lower_bound;
+            (num <= upper_bound).then_some(num)
+        } else {
+            None
+        }
+    }));
     primes
 }
 
