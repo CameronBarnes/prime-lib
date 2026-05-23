@@ -160,14 +160,7 @@ pub fn block_sieve(bound: usize) -> Vec<usize> {
     primes
 }
 
-fn count_items_in_range(primes: &[usize], lower_bound: usize, upper_bound: usize) -> usize {
-    primes
-        .iter()
-        .filter(|x| **x >= lower_bound && **x <= upper_bound)
-        .count()
-}
-
-#[allow(clippy::cast_precision_loss, clippy::missing_panics_doc)]
+#[allow(clippy::missing_panics_doc)]
 #[must_use]
 pub fn nth_prime(n: usize) -> usize {
     static LOW_PRIMES: [usize; 5] = [2, 3, 5, 7, 11];
@@ -187,19 +180,23 @@ pub fn nth_prime(n: usize) -> usize {
     }
 
     let primes = sieve_segment(counter.prime_factors(), lower_bound, upper_bound);
-    while count_items_in_range(&primes, lower_bound, upper_bound) > 1 {
-        let middle = lower_bound + (upper_bound - lower_bound) / 2;
-        if counter.count_primes(middle) >= n {
-            upper_bound = middle;
+    let mut left = 0;
+    let mut right = primes.len() - 1;
+
+    while left < right {
+        let mid_idx = left + (right - left) / 2;
+        let mid_prime = primes[mid_idx];
+
+        let count = counter.count_primes(mid_prime);
+
+        if count >= n {
+            right = mid_idx;
         } else {
-            lower_bound = middle;
+            left = mid_idx + 1;
         }
     }
 
-    *primes
-        .iter()
-        .find(|x| **x >= lower_bound && **x <= upper_bound)
-        .expect("should always have exactly one value left at this point")
+    primes[left]
 }
 
 #[cfg(test)]
