@@ -68,7 +68,7 @@ pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
             i += 1;
         }
     }
-    let mut primes = Vec::with_capacity(is_prime.len());
+    let mut primes = Vec::with_capacity(bound / 8);
     if bound >= 2 {
         primes.push(2);
     }
@@ -100,6 +100,7 @@ fn sieve_segment(
     {
         for prime in primes.iter().skip(1) {
             let mut value = prime * prime;
+            let step = prime *2;
 
             if value < lower_bound {
                 value = lower_bound + ((prime - lower_bound % prime) % prime);
@@ -109,7 +110,7 @@ fn sieve_segment(
             }
             while value <= upper_bound {
                 is_prime[(value - lower_bound) / 2] = false;
-                value += prime * 2;
+                value += step;
             }
         }
         if lower_bound == 1 {
@@ -117,10 +118,10 @@ fn sieve_segment(
         }
     }
 
-    let mut primes = Vec::with_capacity(is_prime.len());
+    let mut primes = Vec::with_capacity((upper_bound - lower_bound) / 8);
     primes.extend(
         is_prime
-            .into_iter()
+            .iter()
             .enumerate()
             .filter_map(|(num, is_prime)| {
                 if *is_prime {
