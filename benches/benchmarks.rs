@@ -11,7 +11,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("eratosthenes 100_000", |b| b.iter(|| sieve_eratosthenes(black_box(1_301_789))));
     c.bench_function("eratosthenes 1_000_000", |b| b.iter(|| sieve_eratosthenes(black_box(179_595_382))));
     c.bench_function("block 100_000", |b| b.iter(|| block_sieve(black_box(1_301_789))));
-    c.bench_function("block 1_000_000", |b| b.iter(|| block_sieve(black_box(179_595_382))));
+    c.bench_function("block 1_000_000", |b| b.iter(|| block_sieve(black_box(15_485_863))));
+    c.bench_function("block 10_000_000", |b| b.iter(|| block_sieve(black_box(179_595_382))));
 }
 
 criterion_group!(benches, criterion_benchmark);

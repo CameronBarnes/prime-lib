@@ -2,6 +2,8 @@ pub mod counting;
 
 use counting::LegendrePrimeCounter;
 
+const BLOCK_SIZE: usize = 600_000;
+
 #[allow(
     clippy::cast_precision_loss,
     clippy::cast_sign_loss,
@@ -86,33 +88,42 @@ pub fn sieve_eratosthenes(bound: usize) -> Vec<usize> {
     primes
 }
 
-fn sieve_segment(primes: &[usize], mut lower_bound: usize, upper_bound: usize) -> Vec<usize> {
+fn sieve_segment(
+    primes: &[usize],
+    is_prime: &mut [bool],
+    mut lower_bound: usize,
+    upper_bound: usize,
+) -> Vec<usize> {
     if lower_bound & 1 == 0 {
         lower_bound += 1;
     }
-    let mut is_prime = vec![true; (upper_bound - lower_bound) / 2 + 1];
     {
-        let is_prime = is_prime.as_mut_slice();
-        for prime in primes {
-            let mut value = (prime * prime).max(lower_bound.div_ceil(*prime) * prime);
-            while value <= upper_bound {
-                if value & 1 != 0 {
-                    is_prime[(value - lower_bound) / 2] = false;
-                }
+        for prime in primes.iter().skip(1) {
+            let mut value = prime * prime;
+
+            if value < lower_bound {
+                value = lower_bound + ((prime - lower_bound % prime) % prime);
+            }
+            if value & 1 == 0 {
                 value += prime;
+            }
+            while value <= upper_bound {
+                is_prime[(value - lower_bound) / 2] = false;
+                value += prime * 2;
             }
         }
         if lower_bound == 1 {
             is_prime[0] = false;
         }
     }
+
     let mut primes = Vec::with_capacity(is_prime.len());
     primes.extend(
         is_prime
             .into_iter()
             .enumerate()
             .filter_map(|(num, is_prime)| {
-                if is_prime {
+                if *is_prime {
                     let num = num * 2 + lower_bound;
                     (num <= upper_bound).then_some(num)
                 } else {
@@ -130,7 +141,7 @@ fn sieve_segment(primes: &[usize], mut lower_bound: usize, upper_bound: usize) -
 )]
 #[must_use]
 pub fn block_sieve(bound: usize) -> Vec<usize> {
-    static BLOCK_SIZE: usize = 200_000;
+    // println!("block size cap: {BLOCK_SIZE}\nblock sieve bound: {bound}");
     if (bound as f64 * 0.9) as usize <= BLOCK_SIZE {
         // We're going to allow for the value to be
         // off by up to 10% and still use a simple
@@ -148,12 +159,21 @@ pub fn block_sieve(bound: usize) -> Vec<usize> {
         block_sieve(nsqurt)
     };
 
+    let mut segment_data = vec![true; BLOCK_SIZE / 2 + 1];
     let mut completed = nsqurt;
     let mut block_primes = Vec::new();
     while completed < bound {
         let upper_bound = (completed + BLOCK_SIZE).min(bound);
-        block_primes.append(&mut sieve_segment(&primes, completed + 1, upper_bound));
+        block_primes.append(&mut sieve_segment(
+            &primes,
+            &mut segment_data,
+            completed + 1,
+            upper_bound,
+        ));
         completed += BLOCK_SIZE;
+        if completed < bound {
+            segment_data.fill(true);
+        }
     }
     primes.append(&mut block_primes);
 
@@ -165,20 +185,29 @@ pub fn block_sieve_segment(
     lower_bound: usize,
     upper_bound_cap: usize,
 ) -> Vec<usize> {
-    static BLOCK_SIZE: usize = 200_000;
     if ((upper_bound_cap - lower_bound) as f64 * 0.9) as usize <= BLOCK_SIZE {
         // We're going to allow for the value to be
         // off by up to 10% and still use a single segment,
         // as at that size it shouldnt matter
-        return sieve_segment(primes, lower_bound, upper_bound_cap);
+        let mut segment_data = vec![true; (upper_bound_cap - lower_bound) / 2 + 1];
+        return sieve_segment(primes, &mut segment_data, lower_bound, upper_bound_cap);
     }
 
+    let mut segment_data = vec![true; BLOCK_SIZE / 2 + 1];
     let mut completed = lower_bound;
     let mut block_primes = Vec::new();
     while completed < upper_bound_cap {
         let upper_bound = (completed + BLOCK_SIZE).min(upper_bound_cap);
-        block_primes.append(&mut sieve_segment(&primes, completed + 1, upper_bound));
+        block_primes.append(&mut sieve_segment(
+            &primes,
+            &mut segment_data,
+            completed + 1,
+            upper_bound,
+        ));
         completed += BLOCK_SIZE;
+        if completed < upper_bound_cap {
+            segment_data.fill(true);
+        }
     }
 
     block_primes
@@ -282,7 +311,8 @@ mod tests {
         )]
         let nsqurt = n.isqrt();
         let mut primes = sieve_eratosthenes(nsqurt);
-        let mut segment = sieve_segment(&primes, nsqurt + 1, n);
+        let mut segment_data = vec![true; (n - nsqurt + 1) / 2 + 1];
+        let mut segment = sieve_segment(&primes, &mut segment_data, nsqurt + 1, n);
         primes.append(&mut segment);
         let eratosthenes = sieve_eratosthenes(n);
         assert_eq!(eratosthenes, primes);
